@@ -64,6 +64,7 @@ import {
   isConditionalDef,
   isDatumDef,
   isFieldDef,
+  isOrderOnlyDef,
   isTypedFieldDef,
   isValueDef,
   LatLongDef,
@@ -71,6 +72,7 @@ import {
   NumericMarkPropDef,
   OffsetDef,
   OrderFieldDef,
+  OrderOnlyDef,
   OrderValueDef,
   PolarDef,
   Position2Def,
@@ -93,6 +95,7 @@ import {AggregatedFieldDef, BinTransform, TimeUnitTransform} from './transform';
 import {isContinuous, isDiscrete, QUANTITATIVE, TEMPORAL} from './type';
 import {keys, some} from './util';
 import {isSignalRef} from './vega.schema';
+import {isBinnedTimeUnit} from './timeunit';
 
 export interface Encoding<F extends Field> {
   /**
@@ -321,7 +324,7 @@ export interface Encoding<F extends Field> {
    *
    * __Note__: In aggregate plots, `order` field should be `aggregate`d to avoid creating additional aggregation grouping.
    */
-  order?: OrderFieldDef<F> | OrderFieldDef<F>[] | OrderValueDef;
+  order?: OrderFieldDef<F> | OrderFieldDef<F>[] | OrderValueDef | OrderOnlyDef;
 }
 
 export interface EncodingWithFacet<F extends Field> extends Encoding<F>, EncodingFacetMapping<F> {}
@@ -362,7 +365,10 @@ export function channelHasNestedOffsetScale<F extends Field>(
 ): boolean {
   if (isXorY(channel)) {
     const fieldDef = encoding[channel];
-    if ((isFieldDef(fieldDef) || isDatumDef(fieldDef)) && isDiscrete(fieldDef.type)) {
+    if (
+      (isFieldDef(fieldDef) || isDatumDef(fieldDef)) &&
+      (isDiscrete(fieldDef.type) || (isFieldDef(fieldDef) && fieldDef.timeUnit))
+    ) {
       const offsetChannel = getOffsetScaleChannel(channel);
       return channelHasFieldOrDatum(encoding, offsetChannel);
     }
@@ -453,7 +459,7 @@ export function extractTransformsFromEncoding(oldEncoding: Encoding<any>, config
             if (!isSecondaryRangeChannel(channel)) {
               newFieldDef['type'] = QUANTITATIVE;
             }
-          } else if (timeUnit) {
+          } else if (timeUnit && !isBinnedTimeUnit(timeUnit)) {
             timeUnits.push({
               timeUnit,
               field,
@@ -545,7 +551,7 @@ export function initEncoding(
       const positionDef = normalizedEncoding[mainChannel];
       if (isFieldDef(positionDef)) {
         if (isContinuous(positionDef.type)) {
-          if (isFieldDef(channelDef)) {
+          if (isFieldDef(channelDef) && !positionDef.timeUnit) {
             // TODO: nesting continuous field instead continuous field should
             // behave like offsetting the data in data domain
             log.warn(log.message.offsetNestedInsideContinuousPositionScaleDropped(mainChannel));
@@ -591,6 +597,13 @@ export function initEncoding(
       (channel === TOOLTIP && isArray(channelDef))
     ) {
       if (channelDef) {
+        if (channel === ORDER) {
+          const def = encoding[channel];
+          if (isOrderOnlyDef(def)) {
+            normalizedEncoding[channel] = def;
+            continue;
+          }
+        }
         // Array of fieldDefs for detail channel (or production rule)
         (normalizedEncoding[channel] as any) = array(channelDef).reduce(
           (defs: FieldDef<string>[], fieldDef: FieldDef<string>) => {

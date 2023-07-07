@@ -15,7 +15,8 @@ describe('compile/mark/encode/position-rect', () => {
             type: 'quantitative',
             scale: {reverse: {signal: 'r'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
 
       const props = rectPosition(model, 'x');
@@ -37,7 +38,8 @@ describe('compile/mark/encode/position-rect', () => {
             field: 'x',
             type: 'quantitative'
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
 
       const props = rectPosition(model, 'x');
@@ -59,7 +61,8 @@ describe('compile/mark/encode/position-rect', () => {
             type: 'quantitative',
             scale: {reverse: {signal: 'r'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
 
       const props = rectPosition(model, 'y');
@@ -82,7 +85,8 @@ describe('compile/mark/encode/position-rect', () => {
             type: 'quantitative',
             scale: {reverse: {signal: 'r'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
 
       const props = rectPosition(model, 'x');
@@ -106,7 +110,8 @@ describe('compile/mark/encode/position-rect', () => {
             type: 'quantitative',
             scale: {reverse: {signal: 'r'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
 
       const props = rectPosition(model, 'y');
@@ -173,7 +178,8 @@ describe('compile/mark/encode/position-rect', () => {
             type: 'quantitative',
             axis: {translate: {signal: 't'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
       model.parseAxesAndHeaders();
 
@@ -198,7 +204,8 @@ describe('compile/mark/encode/position-rect', () => {
             scale: {reverse: {signal: 'r'}},
             axis: {translate: {signal: 't'}}
           }
-        }
+        },
+        config: {bar: {minBandSize: null}}
       });
       model.parseAxesAndHeaders();
 
@@ -208,6 +215,25 @@ describe('compile/mark/encode/position-rect', () => {
       });
       expect(props.x2['offset']).toEqual({
         signal: 't + (r ? -1 : 1) * (o + 0.5)'
+      });
+    });
+
+    it('produces correct default y-mixins for empty y encoding', () => {
+      const model = parseUnitModelWithScaleAndLayoutSize({
+        data: {values: []},
+        mark: {type: 'bar'},
+        encoding: {
+          x: {
+            field: 'x',
+            type: 'quantitative',
+            aggregate: 'mean'
+          }
+        }
+      });
+
+      const props = rectPosition(model, 'y');
+      expect(props.height).toEqual({
+        signal: '0.9 * height'
       });
     });
   });
